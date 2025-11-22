@@ -72,6 +72,7 @@ tools/analyze_*.js
 # Test files
 test_*.dart
 *_test_connection.dart
+*_test_connection.js
 
 # Android signing files (IMPORTANT: Ne jamais commiter ces fichiers!)
 android/key.properties
@@ -79,6 +80,15 @@ android/app/upload-keystore.jks
 android/app/release-keystore.jks
 *.keystore
 *.jks
+
+# Fichiers de backup et temporaires
+*.save
+*.backup
+*.bak
+*.old
+*.corrupted
+*_part*.txt
+*_backup.dart
 
 # Generated assets (peuvent être regénérés)
 # Décommentez si vous ne voulez pas versionner les assets générés
