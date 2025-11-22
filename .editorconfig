@@ -1,0 +1,40 @@
+# Configuration EditorConfig pour garantir UTF-8
+
+# Configuration globale
+root = true
+
+# Tous les fichiers
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Fichiers Dart
+[*.dart]
+charset = utf-8
+indent_style = space
+indent_size = 2
+
+# Fichiers JavaScript/Node.js
+[*.{js,ts,json}]
+charset = utf-8
+indent_style = space
+indent_size = 2
+
+# Fichiers SQL
+[*.sql]
+charset = utf-8
+indent_style = space
+indent_size = 2
+
+# Fichiers Markdown
+[*.md]
+charset = utf-8
+trim_trailing_whitespace = false
+
+# Fichiers YAML
+[*.{yml,yaml}]
+charset = utf-8
+indent_style = space
+indent_size = 2

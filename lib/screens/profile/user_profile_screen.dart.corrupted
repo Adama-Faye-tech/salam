@@ -1,0 +1,319 @@
+import 'package:flutter/material.dar        actions: [
+          IconButton(
+            icon: const Icon(Icons.message),
+            onPressed: () {
+              final userProvider = Provider.of<UserProvider>(context, listen: false);
+              
+              if (!userProvider.isAuthenticated) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+                return;
+              }
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatScreen(
+                    providerId: userId,
+                    providerName: userName,
+                    providerAvatar: userPhotoUrl,
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Envoyer un message',
+          ),
+        ],'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../../models/user_model.dart';
+import '../../providers/user_provider.dart';
+import '../chat/chat_screen.dart';
+import '../auth/login_screen.dart';
+
+/// Écran pour afficher le profil public d'un utilisateur (prestataire ou agriculteur)
+class UserProfileScreen extends StatelessWidget {
+  final String userId;
+  final String userName;
+  final String? userPhone;
+  final String? userLocation;
+  final String? userPhotoUrl;
+  final String? userDescription;
+  final UserType? userType;
+  final double? rating;
+
+  const UserProfileScreen({
+    super.key,
+    required this.userId,
+    required this.userName,
+    this.userPhone,
+    this.userLocation,
+    this.userPhotoUrl,
+    this.userDescription,
+    this.userType,
+    this.rating,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profil'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.message),
+            onPressed: () {
+              // TODO: Ouvrir la discussion avec cet utilisateur
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Discussion àƒ  implémenter')),
+              );
+            },
+            tooltip: 'Envoyer un message',
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Photo et nom
+          Center(
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundImage: userPhotoUrl != null
+                      ? NetworkImage(userPhotoUrl!)
+                      : null,
+                  child: userPhotoUrl == null
+                      ? const Icon(Icons.person, size: 50, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  userName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Type d'utilisateur
+                if (userType != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getUserTypeColor(
+                        userType!,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _getUserTypeColor(userType!)),
+                    ),
+                    child: Text(
+                      _getUserTypeLabel(userType!),
+                      style: TextStyle(
+                        color: _getUserTypeColor(userType!),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                // Note
+                if (rating != null && rating! > 0) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 20),
+                      const SizedBox(width: 4),
+                      Text(
+                        rating!.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        ' / 5.0',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Informations de contact
+          _buildInfoSection(
+            title: 'Informations de contact',
+            children: [
+              if (userPhone != null)
+                _buildInfoRow(
+                  icon: Icons.phone,
+                  label: 'Téléphone',
+                  value: userPhone!,
+                  onTap: () async {
+                    final phoneNumber = userPhone!.replaceAll(
+                      RegExp(r'\s+'),
+                      '',
+                    );
+                    final uri = Uri.parse('tel:$phoneNumber');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Impossible d\'ouvrir l\'application téléphone',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+              if (userLocation != null)
+                _buildInfoRow(
+                  icon: Icons.location_on,
+                  label: 'Localisation',
+                  value: userLocation!,
+                ),
+            ],
+          ),
+
+          // Description
+          if (userDescription != null && userDescription!.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            _buildInfoSection(
+              title: 'a propos',
+              children: [
+                Text(
+                  userDescription!,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[700],
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 32),
+
+          // Bouton de contact
+          ElevatedButton.icon(
+            onPressed: () {
+              // TODO: Ouvrir la discussion
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Ouverture de la discussion...')),
+              );
+            },
+            icon: const Icon(Icons.message),
+            label: const Text('Envoyer un message'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        ...children,
+      ],
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    VoidCallback? onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Icon(icon, size: 24, color: Colors.blue),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null)
+                Icon(Icons.chevron_right, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getUserTypeLabel(UserType type) {
+    switch (type) {
+      case UserType.farmer:
+        return 'Agriculteur';
+      case UserType.provider:
+        return 'Prestataire';
+      case UserType.both:
+        return 'Agriculteur & Prestataire';
+    }
+  }
+
+  Color _getUserTypeColor(UserType type) {
+    switch (type) {
+      case UserType.farmer:
+        return Colors.green;
+      case UserType.provider:
+        return Colors.blue;
+      case UserType.both:
+        return Colors.purple;
+    }
+  }
+}

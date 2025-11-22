@@ -1,0 +1,19 @@
+{
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": false,
+  "files.eol": "\n",
+  "[dart]": {
+    "editor.defaultCharset": "utf8",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultCharset": "utf8",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultCharset": "utf8"
+  },
+  "[markdown]": {
+    "editor.defaultCharset": "utf8"
+  }
+}

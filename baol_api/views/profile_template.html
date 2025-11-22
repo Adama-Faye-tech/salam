@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Balises Open Graph pour Facebook, WhatsApp, LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="📱 Téléchargez SAME - Profil de {{userName}}">
+    <meta property="og:description" content="Découvrez le profil de {{userName}} sur SAME et téléchargez l'application de location de matériel agricole. {{equipmentCount}} équipements disponibles 🚜">
+    <meta property="og:image" content="{{userPhoto}}">
+    <meta property="og:url" content="{{profileUrl}}">
+    <meta property="og:site_name" content="SAME - Location Matériel Agricole">
+    <meta property="og:locale" content="fr_FR">
+    
+    <!-- Balises Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="📱 Téléchargez SAME - Profil de {{userName}}">
+    <meta name="twitter:description" content="Découvrez le profil de {{userName}} sur SAME et téléchargez l'application de location de matériel agricole. {{equipmentCount}} équipements disponibles 🚜">
+    <meta name="twitter:image" content="{{userPhoto}}">
+    <meta name="twitter:app:name:iphone" content="SAME">
+    <meta name="twitter:app:name:googleplay" content="SAME">
+    <meta name="twitter:app:url:googleplay" content="{{appDownloadLink}}">
+    
+    <!-- Balises génériques -->
+    <meta name="description" content="{{userDescription}}">
+    <meta name="author" content="{{userName}}">
+    
+    <!-- Favicon et logo -->
+    <link rel="icon" type="image/png" href="{{appLogo}}">
+    <link rel="apple-touch-icon" href="{{appLogo}}">
+    
+    <title>{{userName}} - SAME</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .app-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .app-tagline {
+            font-size: 14px;
+            opacity: 0.95;
+        }
+        
+        .profile-section {
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .profile-photo {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            border: 5px solid #4CAF50;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            object-fit: cover;
+            background: #f5f5f5;
+        }
+        
+        .profile-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .profile-email {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .profile-location {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border-radius: 20px;
+            color: #4CAF50;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .location-icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .profile-description {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .stats-section {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f5f5f5;
+            margin: 20px 0;
+            border-radius: 12px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .download-app {
+            margin: 30px auto;
+            text-align: center;
+        }
+        
+        .cta-section {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            padding: 30px 20px;
+            margin: 20px 0;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .cta-title {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .cta-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .download-button {
+            display: inline-block;
+            padding: 18px 45px;
+            background: white;
+            color: #4CAF50;
+            text-decoration: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .download-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .download-button:active {
+            transform: translateY(-1px);
+        }
+        
+        .download-button::before {
+            content: '📱';
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .app-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .feature-item {
+            background: rgba(76, 175, 80, 0.1);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .feature-text {
+            font-size: 13px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #4CAF50;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .social-link:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .footer-tagline {
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 480px) {
+            .profile-photo {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .profile-name {
+                font-size: 24px;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+            
+            .app-features {
+                grid-template-columns: 1fr;
+            }
+            
+            .cta-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête avec logo -->
+        <div class="header">
+            <div class="logo">
+                <img src="{{appLogo}}" alt="SAME Logo">
+            </div>
+            <div class="app-name">SAME</div>
+            <div class="app-tagline">Location de Matériel Agricole</div>
+        </div>
+        
+        <!-- Section profil -->
+        <div class="profile-section">
+            <img src="{{userPhoto}}" alt="{{userName}}" class="profile-photo" onerror="this.src='https://ui-avatars.com/api/?name={{userName}}&size=150&background=4CAF50&color=fff'">
+            
+            <h1 class="profile-name">{{userName}}</h1>
+            <p class="profile-email">{{userEmail}}</p>
+            
+            {{#if userLocation}}
+            <div class="profile-location">
+                <svg class="location-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{userLocation}}</span>
+            </div>
+            {{/if}}
+            
+            {{#if userDescription}}
+            <div class="profile-description">
+                {{userDescription}}
+            </div>
+            {{/if}}
+            
+            <!-- Statistiques -->
+            <div class="stats-section">
+                <div class="stat-item">
+                    <div class="stat-value">{{equipmentCount}}</div>
+                    <div class="stat-label">Équipements</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{rating}}</div>
+                    <div class="stat-label">Note moyenne</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{reviewsCount}}</div>
+                    <div class="stat-label">Avis</div>
+                </div>
+            </div>
+            
+            <!-- Section Call-to-Action principale -->
+            <div class="cta-section">
+                <div class="cta-title">📱 Téléchargez SAME maintenant !</div>
+                <div class="cta-subtitle">
+                    Accédez à {{userName}} et des centaines d'équipements agricoles
+                </div>
+                <a href="{{appDownloadLink}}" class="download-button">
+                    Télécharger l'app
+                </a>
+            </div>
+            
+            <!-- Fonctionnalités de l'app -->
+            <div class="app-features">
+                <div class="feature-item">
+                    <div class="feature-icon">🚜</div>
+                    <div class="feature-text">Location de matériel</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">💬</div>
+                    <div class="feature-text">Chat direct</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📍</div>
+                    <div class="feature-text">Géolocalisation</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">⭐</div>
+                    <div class="feature-text">Avis vérifiés</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; 2025 SAME - Location de Matériel Agricole</p>
+            <p class="footer-tagline">
+                Facilitons l'accès au matériel agricole au Sénégal
+            </p>
+            
+            <div class="social-links">
+                <a href="https://facebook.com/same" class="social-link" title="Facebook">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                </a>
+                <a href="https://twitter.com/same" class="social-link" title="Twitter">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                    </svg>
+                </a>
+                <a href="https://instagram.com/same" class="social-link" title="Instagram">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

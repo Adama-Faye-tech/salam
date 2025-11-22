@@ -1,0 +1,65 @@
+﻿import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
+import '../../models/user_model.dart';
+import '../../providers/user_provider.dart';
+import '../chat/chat_screen.dart';
+import '../auth/login_screen.dart';
+
+/// Écran pour afficher le profil public d''un utilisateur (prestataire ou agriculteur)
+class UserProfileScreen extends StatelessWidget {
+  final String userId;
+  final String userName;
+  final String? userPhone;
+  final String? userLocation;
+  final String? userPhotoUrl;
+  final String? userDescription;
+  final UserType? userType;
+  final double? rating;
+
+  const UserProfileScreen({
+    super.key,
+    required this.userId,
+    required this.userName,
+    this.userPhone,
+    this.userLocation,
+    this.userPhotoUrl,
+    this.userDescription,
+    this.userType,
+    this.rating,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(''Profil''),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.message),
+            onPressed: () {
+              final userProvider = Provider.of<UserProvider>(context, listen: false);
+              
+              if (!userProvider.isAuthenticated) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+                return;
+              }
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatScreen(
+                    providerId: userId,
+                    providerName: userName,
+                    providerAvatar: userPhotoUrl,
+                  ),
+                ),
+              );
+            },
+            tooltip: ''Envoyer un message'',
+          ),
+        ],
+      ),
