@@ -13,7 +13,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
+          packages: platforms;android-34
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: 'stable'
