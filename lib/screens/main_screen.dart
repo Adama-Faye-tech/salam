@@ -2,10 +2,8 @@
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import 'home/home_screen.dart';
-import 'orders/orders_screen.dart';
-import 'favorites/favorites_screen.dart';
 import 'profile/profile_screen.dart';
-import 'auth/login_screen.dart';
+import 'settings/settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -28,13 +26,10 @@ class _MainScreenState extends State<MainScreen> {
         currentScreen = const HomeScreen();
         break;
       case 1:
-        currentScreen = isAuthenticated ? const OrdersScreen() : const HomeScreen();
+        currentScreen = const ProfileScreen();
         break;
       case 2:
-        currentScreen = isAuthenticated ? const FavoritesScreen() : const HomeScreen();
-        break;
-      case 3:
-        currentScreen = isAuthenticated ? const ProfileScreen() : const LoginScreen();
+        currentScreen = const SettingsScreen();
         break;
       default:
         currentScreen = const HomeScreen();
@@ -45,10 +40,6 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (!isAuthenticated && (index == 1 || index == 2)) {
-            setState(() => _currentIndex = 3);
-            return;
-          }
           setState(() => _currentIndex = index);
         },
         type: BottomNavigationBarType.fixed,
@@ -60,20 +51,17 @@ class _MainScreenState extends State<MainScreen> {
             activeIcon: Icon(Icons.home),
             label: 'Accueil',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag_outlined),
-            activeIcon: Icon(Icons.shopping_bag),
-            label: 'Commandes',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_outline),
-            activeIcon: Icon(Icons.favorite),
-            label: 'Favoris',
-          ),
           BottomNavigationBarItem(
-            icon: Icon(isAuthenticated ? Icons.person_outline : Icons.login_outlined),
+            icon: Icon(
+              isAuthenticated ? Icons.person_outline : Icons.login_outlined,
+            ),
             activeIcon: Icon(isAuthenticated ? Icons.person : Icons.login),
             label: isAuthenticated ? 'Profil' : 'Connexion',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
+            label: 'Paramètres',
           ),
         ],
       ),

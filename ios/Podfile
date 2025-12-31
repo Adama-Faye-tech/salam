@@ -1,0 +1,22 @@
+platform :ios, '12.0'
+
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+# Flutter Pod helper
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path('..')
+  File.expand_path(File.join(generated_xcode_build_settings_path, '..', 'flutter'))
+end
+
+require File.expand_path(File.join(flutter_root, 'packages', 'flutter_tools', 'bin', 'podhelper'))
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  # Pods for Runner
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  flutter_post_install(installer)
+end

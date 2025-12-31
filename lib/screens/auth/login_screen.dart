@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../providers/user_provider.dart';
 import '../../config/theme.dart';
 import 'register_screen.dart';
@@ -63,6 +64,28 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    final result = await context.read<UserProvider>().loginWithGoogle();
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/main', (route) => false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,9 +130,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Veuillez entrer votre email';
-                        if (!value.contains('@')) return 'Email invalide';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Email invalide';
+                        }
                         return null;
                       },
                     ),
@@ -135,10 +161,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Veuillez entrer votre mot de passe';
-                        if (value.length < 6)
+                        }
+                        if (value.length < 6) {
                           return 'Le mot de passe doit contenir au moins 6 caractères';
+                        }
                         return null;
                       },
                     ),
@@ -181,6 +209,32 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // Bouton Google
+                    OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _loginWithGoogle,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.google,
+                        color: Colors.red,
+                      ),
+                      label: const Text(
+                        'Continuer avec Google',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: Colors.grey[300]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 16),
                     Row(
                       children: [

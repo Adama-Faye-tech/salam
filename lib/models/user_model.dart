@@ -29,7 +29,8 @@
       name: json['name'] ?? '',
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
-      photoUrl: json['photoUrl'],
+      // Accept multiple photo key variants
+      photoUrl: json['photoUrl'] ?? json['photo_url'] ?? json['photo'],
       address: json['address'],
       location: json['location'],
       userType: UserType.values.firstWhere(
@@ -47,7 +48,9 @@
       'name': name,
       'email': email,
       'phone': phone,
+      // Export both camelCase and snake_case for compatibility
       'photoUrl': photoUrl,
+      'photo_url': photoUrl,
       'address': address,
       'location': location,
       'userType': userType.toString().split('.').last,

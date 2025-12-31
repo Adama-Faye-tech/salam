@@ -53,6 +53,9 @@
     this.updatedAt,
   });
 
+  /// Backwards-compatible alias: some screens expect `ownerId`.
+  String get ownerId => providerId;
+
   factory Equipment.fromJson(Map<String, dynamic> json) {
     return Equipment(
       id: json['id'] ?? '',
@@ -70,7 +73,9 @@
       brand: json['brand'],
       photos: List<String>.from(json['photos'] ?? []),
       videos: List<String>.from(json['videos'] ?? []),
-      providerId: json['providerId'] ?? '',
+      // Accept multiple possible keys for backwards compatibility
+      providerId:
+          json['providerId'] ?? json['ownerId'] ?? json['owner_id'] ?? '',
       providerName: json['providerName'] ?? '',
       providerPhoto: json['providerPhoto'],
       providerRating: json['providerRating']?.toDouble(),
@@ -81,8 +86,12 @@
       isAvailable: json['isAvailable'] ?? true,
       technicalSpecs: json['technicalSpecs'],
       interventionZone: json['interventionZone'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : null,
     );
   }
 
@@ -100,7 +109,10 @@
       'brand': brand,
       'photos': photos,
       'videos': videos,
+      // Keep several key formats to remain compatible with different backends / older clients
       'providerId': providerId,
+      'ownerId': providerId,
+      'owner_id': providerId,
       'providerName': providerName,
       'providerPhoto': providerPhoto,
       'providerRating': providerRating,
@@ -184,4 +196,3 @@ enum EquipmentType {
   pulverisateur,
   autre,
 }
-

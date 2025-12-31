@@ -63,5 +63,33 @@
 	<string>Cette application a besoin de votre position pour afficher les équipements et prestataires à proximité.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Cette application a besoin de votre position pour afficher les équipements et prestataires à proximité.</string>
+
+	<!-- App Transport Security: Force HTTPS -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Bloquer toutes les connexions HTTP non sécurisées -->
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<!-- Exception uniquement pour Supabase (déjà en HTTPS) -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<!-- Aucune exception nécessaire car Supabase utilise HTTPS -->
+		</dict>
+	</dict>
+
+	<!-- URL scheme personnalisé pour gérer les deep links (ex: com.salamagri.salam://reset-password) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.salamagri.salam</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.salamagri.salam</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

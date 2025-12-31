@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../config/theme.dart';
-import '../../config/api_config.dart';
-import '../../services/api_service.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -528,22 +526,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               Navigator.pop(context);
 
-              // Appel API
-              final apiService = ApiService();
-              final result = await apiService.changePassword(
-                oldPassword: oldPassword,
-                newPassword: newPassword,
-              );
-
-              if (result['success'] == true) {
-                _showSuccessSnackBar(
-                  result['message'] ?? 'Mot de passe changé avec succès',
-                );
-              } else {
-                _showErrorSnackBar(
-                  result['message'] ??
-                      'Erreur lors du changement de mot de passe',
-                );
+              // Appel Provider
+              try {
+                await context.read<UserProvider>().updatePassword(newPassword);
+                if (!context.mounted) return;
+                _showSuccessSnackBar('Mot de passe changé avec succès');
+              } catch (e) {
+                if (!context.mounted) return;
+                _showErrorSnackBar('Erreur: $e');
               }
             },
             child: const Text('Confirmer'),
@@ -661,13 +651,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildInfoRow('Version', _appVersion),
-              _buildInfoRow('API URL', ApiConfig.baseUrl),
-              _buildInfoRow('IP Réseau', '192.168.1.23'),
-              _buildInfoRow('Réseau', 'MACMILLER (5 GHz)'),
-              _buildInfoRow('Vitesse', '468 Mbps'),
-              _buildInfoRow('Encodage', 'UTF-8'),
+              _buildInfoRow('Backend', 'Firebase'),
               _buildInfoRow('Framework', 'Flutter'),
-              _buildInfoRow('Backend', 'Node.js + PostgreSQL'),
             ],
           ),
         ),
@@ -793,27 +778,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final userProvider = context.read<UserProvider>();
               navigator.pop();
 
-              // Appel API pour supprimer le compte
-              final apiService = ApiService();
-              final result = await apiService.deleteAccount();
-
-              if (!mounted) return;
-
-              if (result['success'] == true) {
-                _showSuccessSnackBar(
-                  result['message'] ?? 'Compte supprimé avec succès',
-                );
-
-                // Déconnexion
-                await userProvider.logout();
+              // Appel Provider pour supprimer le compte
+              try {
+                // Appeler la méthode du provider pour supprimer le compte
+                await userProvider.deleteAccount();
 
                 if (!mounted) return;
 
+                _showSuccessSnackBar('Compte supprimé avec succès');
+
+                // Déconnexion et navigation vers l'écran de login
+                await userProvider.logout();
+                if (!mounted) return;
                 navigator.pushNamedAndRemoveUntil('/login', (route) => false);
-              } else {
+              } catch (e) {
+                if (!mounted) return;
                 _showErrorSnackBar(
-                  result['message'] ??
-                      'Erreur lors de la suppression du compte',
+                  'Erreur lors de la suppression du compte: $e',
                 );
               }
             },

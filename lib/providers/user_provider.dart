@@ -1,8 +1,10 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import '../services/supabase_service.dart';
 import '../services/logger_service.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 
 class UserProvider with ChangeNotifier {
   UserModel? _currentUser;
@@ -10,6 +12,8 @@ class UserProvider with ChangeNotifier {
   String? _error;
 
   UserModel? get currentUser => _currentUser;
+  // Backwards-compatible alias used in some screens/providers
+  UserModel? get user => _currentUser;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _currentUser != null;
@@ -21,52 +25,61 @@ class UserProvider with ChangeNotifier {
   Future<void> checkSession() async {
     try {
       Log.d('Vérification de la session utilisateur', tag: 'UserProvider');
-      final supabase = SupabaseService.instance;
-      final user = supabase.currentUser;
+      final user = FirebaseAuthService.currentUser;
 
       if (user != null) {
-        // Récupérer les données du profil depuis Supabase avec timeout
+        // Récupérer les données du profil depuis Firestore
         try {
-          final profileData = await supabase.profiles
-              .select()
-              .eq('id', user.id)
-              .single()
-              .timeout(const Duration(seconds: 5));
+          final profileDoc = await FirestoreService.users.doc(user.uid).get();
 
-          _currentUser = UserModel(
-            id: user.id,
-            name: profileData['name'] ?? user.userMetadata?['name'] ?? '',
-            email: user.email ?? '',
-            phone: profileData['phone'] ?? user.userMetadata?['phone'] ?? '',
-            address: profileData['address'],
-            location: profileData['location'] ?? user.userMetadata?['location'],
-            photoUrl:
-                profileData['photo_url'] ?? user.userMetadata?['photo_url'],
-            description:
-                profileData['description'] ?? user.userMetadata?['description'],
-            userType: _parseUserType(
-              profileData['user_type'] ?? user.userMetadata?['user_type'],
-            ),
-            createdAt: DateTime.parse(
-              profileData['created_at'] ?? user.createdAt,
-            ),
-          );
+          if (profileDoc.exists) {
+            final profileData = profileDoc.data() as Map<String, dynamic>;
+
+            _currentUser = UserModel(
+              id: user.uid,
+              name: profileData['name'] ?? user.displayName ?? '',
+              email: user.email ?? '',
+              phone: profileData['phone'] ?? '',
+              address: profileData['address'],
+              location: profileData['location'],
+              photoUrl: profileData['photo_url'] ?? user.photoURL,
+              description: profileData['description'],
+              userType: _parseUserType(profileData['user_type']),
+              createdAt:
+                  FirestoreService.timestampToDateTime(
+                    profileData['created_at'],
+                  ) ??
+                  DateTime.now(),
+            );
+          } else {
+            // Document de profil n'existe pas encore, créer à partir des données Auth
+            _currentUser = UserModel(
+              id: user.uid,
+              name: user.displayName ?? '',
+              email: user.email ?? '',
+              phone: '',
+              address: null,
+              location: null,
+              photoUrl: user.photoURL,
+              description: null,
+              userType: UserType.farmer,
+              createdAt: user.metadata.creationTime ?? DateTime.now(),
+            );
+          }
         } catch (e) {
-          // Si la table profiles n'existe pas, utiliser les métadonnées Auth
-          debugPrint(
-            '⚠️ Profil table non accessible, utilisation Auth metadata: $e',
-          );
+          // Si erreur Firestore, utiliser les données Auth uniquement
+          debugPrint('⚠️ Profil Firestore non accessible: $e');
           _currentUser = UserModel(
-            id: user.id,
-            name: user.userMetadata?['name'] ?? '',
+            id: user.uid,
+            name: user.displayName ?? '',
             email: user.email ?? '',
-            phone: user.userMetadata?['phone'] ?? '',
-            address: user.userMetadata?['address'],
-            location: user.userMetadata?['location'],
-            photoUrl: user.userMetadata?['photo_url'],
-            description: user.userMetadata?['description'],
-            userType: _parseUserType(user.userMetadata?['user_type']),
-            createdAt: DateTime.parse(user.createdAt),
+            phone: '',
+            address: null,
+            location: null,
+            photoUrl: user.photoURL,
+            description: null,
+            userType: UserType.farmer,
+            createdAt: user.metadata.creationTime ?? DateTime.now(),
           );
         }
 
@@ -88,7 +101,7 @@ class UserProvider with ChangeNotifier {
       );
       _currentUser = null;
       notifyListeners();
-      await SupabaseService.instance.signOut();
+      await FirebaseAuthService.signOut();
     }
   }
 
@@ -110,10 +123,12 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final supabase = SupabaseService.instance;
-      final response = await supabase.signIn(email: email, password: password);
+      final userCredential = await FirebaseAuthService.signIn(
+        email: email,
+        password: password,
+      );
 
-      if (response.user != null) {
+      if (userCredential.user != null) {
         // Charger le profil complet
         await checkSession();
 
@@ -133,19 +148,19 @@ class UserProvider with ChangeNotifier {
     } catch (e) {
       String errorMessage = 'Erreur de connexion';
 
-      // Analyser le type d'erreur pour donner un message plus clair
+      // Analyser le type d'erreur Firebase
       final errorString = e.toString().toLowerCase();
-      if (errorString.contains('invalid_credentials') ||
-          errorString.contains('invalid login credentials')) {
+      if (errorString.contains('invalid-credential') ||
+          errorString.contains('wrong-password') ||
+          errorString.contains('user-not-found')) {
         errorMessage =
             'Email ou mot de passe incorrect.\nSi vous n\'avez pas de compte, veuillez vous inscrire.';
       } else if (errorString.contains('network') ||
           errorString.contains('timeout')) {
         errorMessage =
             'Problème de connexion réseau. Vérifiez votre connexion internet.';
-      } else if (errorString.contains('email not confirmed')) {
-        errorMessage =
-            'Veuillez confirmer votre email avant de vous connecter.';
+      } else if (errorString.contains('too-many-requests')) {
+        errorMessage = 'Trop de tentatives. Veuillez réessayer plus tard.';
       } else {
         errorMessage = 'Erreur: ${e.toString()}';
       }
@@ -158,6 +173,7 @@ class UserProvider with ChangeNotifier {
       return {'success': false, 'message': errorMessage};
     }
   }
+
 
   Future<Map<String, dynamic>> register({
     required String email,
@@ -172,46 +188,76 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final supabase = SupabaseService.instance;
-
-      // 1. Créer le compte Supabase Auth avec métadonnées
-      final response = await supabase.signUp(
+      // 1. Créer le compte Firebase Auth
+      final userCredential = await FirebaseAuthService.signUp(
         email: email,
         password: password,
-        name: name,
-        metadata: {
-          'phone': phone,
-          'user_type': userType.name,
-          'location': location,
-        },
       );
 
-      if (response.user != null) {
-        final userId = response.user!.id;
+      if (userCredential.user != null) {
+        final userId = userCredential.user!.uid;
+        debugPrint('✅ Compte créé avec succès, ID: $userId');
 
-        // 2. Créer le profil dans la table profiles (si elle existe)
+        // 2. Créer le document de profil dans Firestore
         try {
-          await supabase.profiles.insert({
+          await FirestoreService.users.doc(userId).set({
             'id': userId,
             'name': name,
+            'email': email,
             'phone': phone,
             'user_type': userType.name,
             'location': location,
-            'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
+            'created_at': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
           });
+          debugPrint('✅ Profil créé dans Firestore');
         } catch (e) {
-          debugPrint('⚠️ Table profiles non accessible: $e');
+          debugPrint('⚠️ Erreur création profil Firestore: $e');
         }
 
-        // 3. Charger le profil complet
+        // 3. Créer l'utilisateur en mémoire
+        _currentUser = UserModel(
+          id: userId,
+          name: name,
+          email: email,
+          phone: phone,
+          address: null,
+          location: location,
+          photoUrl: null,
+          description: null,
+          userType: userType,
+          createdAt: DateTime.now(),
+        );
+
+        debugPrint('✅ Utilisateur créé en mémoire: ${_currentUser?.name}');
+
+        // 4. Charger les vraies données depuis Firestore
         await checkSession();
 
         _isLoading = false;
         notifyListeners();
+
+        // Vérifier si l'email est vérifié
+        if (!userCredential.user!.emailVerified) {
+          try {
+            await FirebaseAuthService.sendEmailVerification();
+          } catch (e) {
+            debugPrint('⚠️ Erreur envoi email de vérification: $e');
+          }
+
+          return {
+            'success': true,
+            'requiresConfirmation': true,
+            'message':
+                '✅ Compte créé avec succès !\n\n'
+                '📧 Vérifiez votre email pour confirmer votre compte.\n\n'
+                '⚠️ Vous devez confirmer votre email pour accéder à toutes les fonctionnalités.',
+          };
+        }
+
         return {
           'success': true,
-          'message': 'Inscription réussie',
+          'message': 'Inscription réussie ! Bienvenue sur SALAM.',
           'user': _currentUser,
         };
       } else {
@@ -232,7 +278,7 @@ class UserProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      await SupabaseService.instance.signOut();
+      await FirebaseAuthService.signOut();
       _currentUser = null;
     } catch (e) {
       debugPrint('Erreur déconnexion: $e');
@@ -263,8 +309,7 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final supabase = SupabaseService.instance;
-      final userId = supabase.currentUser?.id;
+      final userId = FirebaseAuthService.currentUser?.uid;
 
       if (userId == null) {
         _isLoading = false;
@@ -272,41 +317,21 @@ class UserProvider with ChangeNotifier {
         return {'success': false, 'message': 'Session expirée'};
       }
 
-      // 1. Mettre à jour les métadonnées de l'utilisateur (nom, etc.)
-      final userMetadata = <String, dynamic>{};
-      if (name != null) userMetadata['name'] = name;
-      if (phone != null) userMetadata['phone'] = phone;
-      if (location != null) userMetadata['location'] = location;
-      if (photoUrl != null) userMetadata['photo_url'] = photoUrl;
-      if (description != null) userMetadata['description'] = description;
-      if (userType != null) userMetadata['user_type'] = userType;
+      // Préparer les données à mettre à jour
+      final updateData = <String, dynamic>{};
+      if (name != null) updateData['name'] = name;
+      if (phone != null) updateData['phone'] = phone;
+      if (location != null) updateData['location'] = location;
+      if (photoUrl != null) updateData['photo_url'] = photoUrl;
+      if (description != null) updateData['description'] = description;
+      if (userType != null) updateData['user_type'] = userType;
+      updateData['updated_at'] = FieldValue.serverTimestamp();
 
-      if (userMetadata.isNotEmpty) {
-        await supabase.updateUser(data: userMetadata);
+      if (updateData.isNotEmpty) {
+        await FirestoreService.users.doc(userId).update(updateData);
       }
 
-      // 2. Mettre à jour la table profiles si elle existe
-      try {
-        final profileData = <String, dynamic>{};
-        if (name != null) profileData['name'] = name;
-        if (phone != null) profileData['phone'] = phone;
-        if (location != null) profileData['location'] = location;
-        if (photoUrl != null) profileData['photo_url'] = photoUrl;
-        if (description != null) profileData['description'] = description;
-        if (userType != null) profileData['user_type'] = userType;
-        profileData['updated_at'] = DateTime.now().toIso8601String();
-
-        if (profileData.isNotEmpty) {
-          await supabase.profiles
-              .upsert({'id': userId, ...profileData})
-              .select()
-              .single();
-        }
-      } catch (e) {
-        debugPrint('⚠️ Table profiles non accessible: $e');
-      }
-
-      // 3. Mettre à jour le modèle local
+      // Mettre à jour le modèle local
       _currentUser = UserModel(
         id: _currentUser!.id,
         name: name ?? _currentUser!.name,
@@ -340,6 +365,42 @@ class UserProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return {'success': false, 'message': 'Erreur: $e'};
+    }
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await FirebaseAuthService.updatePassword(newPassword);
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Erreur lors de la mise à jour du mot de passe: $e');
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final userId = FirebaseAuthService.currentUser?.uid;
+      if (userId != null) {
+        // Supprimer le document Firestore
+        await FirestoreService.users.doc(userId).delete();
+      }
+
+      // Supprimer le compte Firebase Auth
+      await FirebaseAuthService.deleteAccount();
+
+      // Déconnexion locale
+      await logout();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Erreur lors de la suppression du compte: $e');
     }
   }
 

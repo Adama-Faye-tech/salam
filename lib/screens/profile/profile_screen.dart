@@ -1,14 +1,8 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../providers/user_provider.dart';
-import 'edit_profile_screen.dart';
-import '../equipment/new_equipment_screen.dart';
-import '../equipment/my_equipment_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
-import '../chat/chat_list_screen.dart';
 import '../settings/settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -21,19 +15,6 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Mon Profil'),
         centerTitle: true,
         actions: [
-          Consumer<UserProvider>(
-            builder: (context, userProvider, _) {
-              if (userProvider.isAuthenticated) {
-                return IconButton(
-                  icon: const Icon(Icons.share),
-                  tooltip: 'Partager mon profil',
-                  onPressed: () =>
-                      _shareProfile(context, userProvider.currentUser!.id),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -101,45 +82,41 @@ class ProfileScreen extends StatelessWidget {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // En-tête profil sans gradient
+                // En-tête profil
                 Container(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
                       // Photo de profil
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Theme.of(
-                              context,
-                            ).primaryColor.withValues(alpha: 0.1),
-                            child: user?.photoUrl != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      user!.photoUrl!,
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Icon(
-                                              Icons.person,
-                                              size: 60,
-                                              color: Theme.of(
-                                                context,
-                                              ).primaryColor,
-                                            );
-                                          },
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                          ),
-                        ],
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.1),
+                        child: user?.photoUrl != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  user!.photoUrl!,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) {
+                                        return Icon(
+                                          Icons.person,
+                                          size: 60,
+                                          color: Theme.of(
+                                            context,
+                                          ).primaryColor,
+                                        );
+                                      },
+                                ),
+                              )
+                            : Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Theme.of(context).primaryColor,
+                              ),
                       ),
                       const SizedBox(height: 16),
                       // Nom
@@ -191,65 +168,6 @@ class ProfileScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.edit,
-                        title: 'Modifier mon profil',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EditProfileScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      _buildSectionTitle('Mes équipements'),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.inventory,
-                        title: 'Mes équipements',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MyEquipmentScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.add_business,
-                        title: 'Publier un équipement',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NewEquipmentScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      _buildMenuItem(
-                        context,
-                        icon: Icons.message,
-                        title: 'Mes messages',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ChatListScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 8),
                       _buildSectionTitle('Aide & Support'),
                       _buildMenuItem(
                         context,
@@ -278,7 +196,7 @@ class ProfileScreen extends StatelessWidget {
                             ),
                             children: [
                               const Text(
-                                'Application de location de matériel agricole',
+                                'Application simplifiée de location de matériel agricole',
                               ),
                             ],
                           );
@@ -319,11 +237,6 @@ class ProfileScreen extends StatelessWidget {
                           if (confirm == true && context.mounted) {
                             await userProvider.logout();
                             if (context.mounted) {
-                              // Rediriger vers l'écran de connexion et effacer tout l'historique
-                              Navigator.of(context).pushNamedAndRemoveUntil(
-                                '/login',
-                                (route) => false,
-                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Déconnexion réussie'),
@@ -376,134 +289,5 @@ class ProfileScreen extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
     );
-  }
-
-  /// Partage le profil utilisateur via un lien web avec Open Graph
-  void _shareProfile(BuildContext context, String userId) async {
-    try {
-      // URL de l'API (à configurer selon votre environnement)
-      const apiUrl =
-          'http://localhost:3000'; // TODO: Remplacer par votre URL de production
-      final profileUrl = '$apiUrl/api/profile/share/$userId';
-
-      // Afficher un dialogue avec options
-      showModalBottomSheet(
-        context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (context) => Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Icon(Icons.share, size: 48, color: Color(0xFF4CAF50)),
-              const SizedBox(height: 16),
-              const Text(
-                'Partager mon profil',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Partagez votre profil professionnel avec vos contacts',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 24),
-
-              // Bouton Partager
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await Share.share(
-                      'Découvrez mon profil sur SAME - Location de matériel agricole\n\n$profileUrl',
-                      subject: 'Mon profil SAME',
-                    );
-                  },
-                  icon: const Icon(Icons.share),
-                  label: const Text('Partager le lien'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Bouton Copier le lien
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: profileUrl));
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('✅ Lien copié dans le presse-papier'),
-                          backgroundColor: Color(0xFF4CAF50),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.copy),
-                  label: const Text('Copier le lien'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Afficher le lien
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        profileUrl,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors du partage: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }

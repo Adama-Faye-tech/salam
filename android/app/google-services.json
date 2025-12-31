@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "690199802006",
+    "project_id": "salam-802da",
+    "storage_bucket": "salam-802da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:690199802006:android:bc8c6716019655385152b7",
+        "android_client_info": {
+          "package_name": "com.salamagri.salam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1DOtoTwJdFtcZPlq-Rpz5sGQLaljIjYY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

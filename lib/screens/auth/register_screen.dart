@@ -54,14 +54,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!mounted) return;
 
     if (result['success']) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      // Vérifier si confirmation email requise
+      if (result['requiresConfirmation'] == true) {
+        // Afficher un message expliquant la confirmation email
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.mark_email_read, color: Colors.green, size: 32),
+                SizedBox(width: 12),
+                Text('Confirmer votre email'),
+              ],
+            ),
+            content: Text(
+              result['message'] ??
+                  '✅ Compte créé avec succès !\n\n'
+                      '📧 Vérifiez votre email pour confirmer votre compte.\n\n'
+                      '⚠️ Vous devez confirmer votre email avant de pouvoir vous connecter et publier des annonces.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Fermer le dialog
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/login', (route) => false);
+                },
+                child: const Text('OK, compris'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Inscription réussie avec connexion automatique
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (!mounted) return;
+
+        // Vérifier que l'utilisateur est bien authentifié
+        final userProvider = context.read<UserProvider>();
+        debugPrint(
+          '🔐 Après inscription - isAuthenticated: ${userProvider.isAuthenticated}',
+        );
+        debugPrint('👤 Utilisateur: ${userProvider.currentUser?.name}');
+
+        // Rediriger vers l'écran principal après inscription réussie
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/main', (route) => false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message'] ?? 'Inscription réussie ! Bienvenue sur SALAM.',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -1,19 +1,11 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/equipment_model.dart';
 import '../../providers/equipment_provider.dart';
-import '../../providers/favorites_provider.dart';
 import '../../providers/user_provider.dart';
-import '../../widgets/media_carousel.dart';
-import '../../config/api_config.dart';
-import '../chat/chat_screen.dart';
-import '../auth/login_screen.dart';
-import '../orders/booking_screen.dart';
-import '../profile/user_profile_screen.dart';
 
 class EquipmentDetailScreen extends StatefulWidget {
   final Equipment equipment;
@@ -25,19 +17,7 @@ class EquipmentDetailScreen extends StatefulWidget {
 }
 
 class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
-  final PageController _pageController = PageController();
-
-  @override
-  void initState() {
-    super.initState();
-    // Charger les équipements du prestataire sera fait via Consumer dans _buildProviderServices
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
+  int _currentPhotoIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +34,7 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildImageCarousel(),
+                _buildImageGallery(),
                 _buildMainInfo(currencyFormat),
                 _buildDescription(),
                 _buildTechnicalSpecs(),
@@ -80,66 +60,67 @@ class _EquipmentDetailScreenState extends State<EquipmentDetailScreen> {
         icon: const Icon(Icons.arrow_back, color: Colors.black),
         onPressed: () => Navigator.pop(context),
       ),
-      actions: [
-        Consumer<FavoritesProvider>(
-          builder: (context, favoritesProvider, child) {
-            final isFavorite = favoritesProvider.isEquipmentFavorite(
-              widget.equipment.id,
-            );
-            return IconButton(
-              icon: Icon(
-                isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: isFavorite ? Colors.red : Colors.black,
-              ),
-              onPressed: () {
-                favoritesProvider.toggleEquipmentFavorite(widget.equipment.id);
-              },
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.share, color: Colors.black),
-          onPressed: () async {
-            final equipment = widget.equipment;
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
-            final shareText =
-                '''
-🚜 ${equipment.name}
-💰 ${equipment.pricePerDay} FCFA/jour
-📍 ${equipment.location}
-
-${equipment.description}
-
-🔗 Voir sur SAME - Plateforme de location d'équipements agricoles
-''';
-
-            try {
-              await Share.share(
-                shareText,
-                subject: 'Équipement: ${equipment.name}',
-              );
-            } catch (e) {
-              if (context.mounted) {
-                scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Erreur lors du partage'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
-        ),
-      ],
     );
   }
 
-  Widget _buildImageCarousel() {
-    return MediaCarousel(
-      photos: widget.equipment.photos,
-      videos: widget.equipment.videos,
-      height: 350,
-      showIndicator: true,
+  Widget _buildImageGallery() {
+    final photos = widget.equipment.photos;
+    
+    if (photos.isEmpty) {
+      return Container(
+        height: 300,
+        color: Colors.grey[300],
+        child: const Center(
+          child: Icon(Icons.agriculture, size: 80, color: Colors.grey),
+        ),
+      );
+    }
+
+    return Container(
+      height: 300,
+      child: Stack(
+        children: [
+          PageView.builder(
+            itemCount: photos.length,
+            onPageChanged: (index) {
+              setState(() => _currentPhotoIndex = index);
+            },
+            itemBuilder: (context, index) {
+              return CachedNetworkImage(
+                imageUrl: photos[index],
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.error, size: 50),
+                ),
+              );
+            },
+          ),
+          if (photos.length > 1)
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_currentPhotoIndex + 1}/${photos.length}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -205,17 +186,6 @@ ${equipment.description}
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
               ),
-              if (widget.equipment.distance != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                  '${widget.equipment.distance!.toStringAsFixed(1)} km',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
             ],
           ),
           const SizedBox(height: 16),
@@ -366,7 +336,7 @@ ${equipment.description}
                 radius: 30,
                 backgroundImage: widget.equipment.providerPhoto != null
                     ? CachedNetworkImageProvider(
-                        '${ApiConfig.baseUrl}${widget.equipment.providerPhoto}',
+                        widget.equipment.providerPhoto!,
                       )
                     : null,
                 child: widget.equipment.providerPhoto == null
@@ -403,29 +373,6 @@ ${equipment.description}
                   ],
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfileScreen(
-                        userId: widget.equipment.providerId,
-                        userName: widget.equipment.providerName,
-                        userPhotoUrl: widget.equipment.providerPhoto,
-                        rating: widget.equipment.providerRating,
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Voir profil'),
-              ),
             ],
           ),
         ],
@@ -436,7 +383,6 @@ ${equipment.description}
   Widget _buildProviderServices() {
     return Consumer<EquipmentProvider>(
       builder: (context, equipmentProvider, child) {
-        // Filtrer les équipements du même prestataire
         final otherServices = equipmentProvider.equipments
             .where(
               (e) =>
@@ -492,8 +438,7 @@ ${equipment.description}
                               ),
                               child: equipment.photos.isNotEmpty
                                   ? CachedNetworkImage(
-                                      imageUrl:
-                                          '${ApiConfig.baseUrl}${equipment.photos[0]}',
+                                      imageUrl: equipment.photos[0],
                                       height: 100,
                                       width: double.infinity,
                                       fit: BoxFit.cover,
@@ -590,22 +535,26 @@ ${equipment.description}
               ),
             ),
             const SizedBox(width: 16),
-            OutlinedButton.icon(
-              onPressed: _openChat,
-              icon: const Icon(Icons.chat_bubble_outline),
-              label: const Text('Contacter'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.green,
-                side: const BorderSide(color: Colors.green),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
             ElevatedButton(
-              onPressed: widget.equipment.isAvailable ? _openBooking : null,
+              onPressed: widget.equipment.isAvailable
+                  ? () {
+                      final userProvider = context.read<UserProvider>();
+                      if (!userProvider.isAuthenticated) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Veuillez vous connecter pour continuer'),
+                          ),
+                        );
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fonctionnalité de réservation simplifiée'),
+                          backgroundColor: Colors.blue,
+                        ),
+                      );
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -615,51 +564,9 @@ ${equipment.description}
                 ),
                 disabledBackgroundColor: Colors.grey,
               ),
-              child: const Text('Réserver'),
+              child: const Text('Voir les détails'),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _openBooking() {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-    if (!userProvider.isAuthenticated) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookingScreen(equipment: widget.equipment),
-      ),
-    );
-  }
-
-  void _openChat() {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-    if (!userProvider.isAuthenticated) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatScreen(
-          providerId: widget.equipment.providerId,
-          providerName: widget.equipment.providerName,
-          providerAvatar: widget.equipment.providerPhoto,
         ),
       ),
     );

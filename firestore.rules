@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // ========================================
+    // USERS Collection
+    // ========================================
+    match /users/{userId} {
+      // Tout utilisateur authentifié peut lire les profils
+      allow read: if isAuthenticated();
+      
+      // Seul le propriétaire peut créer/modifier son profil
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isOwner(userId);
+      
+      // Seul le propriétaire peut supprimer son profil
+      allow delete: if isOwner(userId);
+    }
+    
+    // ========================================
+    // EQUIPMENT Collection
+    // ========================================
+    match /equipment/{equipmentId} {
+      // Tout utilisateur authentifié peut lire les équipements
+      allow read: if isAuthenticated();
+      
+      // Tout utilisateur authentifié peut créer un équipement
+      allow create: if isAuthenticated() 
+                    && request.resource.data.owner_id == request.auth.uid;
+      
+      // Seul le propriétaire peut modifier/supprimer
+      allow update, delete: if isAuthenticated() 
+                            && resource.data.owner_id == request.auth.uid;
+    }
+    
+    // ========================================
+    // CHATS Collection
+    // ========================================
+    match /chats/{chatId} {
+      // Les participants peuvent lire le chat
+      allow read: if isAuthenticated() 
+                  && (resource.data.user_id == request.auth.uid 
+                      || resource.data.provider_id == request.auth.uid);
+      
+      // Tout utilisateur authentifié peut créer un chat
+      allow create: if isAuthenticated();
+      
+      // Les participants peuvent mettre à jour le chat
+      allow update: if isAuthenticated() 
+                    && (resource.data.user_id == request.auth.uid 
+                        || resource.data.provider_id == request.auth.uid);
+      
+      // Les participants peuvent supprimer le chat
+      allow delete: if isAuthenticated() 
+                    && (resource.data.user_id == request.auth.uid 
+                        || resource.data.provider_id == request.auth.uid);
+      
+      // Messages sous-collection
+      match /messages/{messageId} {
+        // Les participants du chat peuvent lire les messages
+        allow read: if isAuthenticated() 
+                    && (get(/databases/$(database)/documents/chats/$(chatId)).data.user_id == request.auth.uid 
+                        || get(/databases/$(database)/documents/chats/$(chatId)).data.provider_id == request.auth.uid);
+        
+        // Les participants peuvent créer des messages
+        allow create: if isAuthenticated() 
+                      && request.resource.data.sender_id == request.auth.uid;
+        
+        // Seul l'expéditeur peut mettre à jour son message
+        allow update: if isAuthenticated() 
+                      && resource.data.sender_id == request.auth.uid;
+        
+        // Les participants peuvent supprimer les messages
+        allow delete: if isAuthenticated() 
+                      && (resource.data.sender_id == request.auth.uid 
+                          || resource.data.receiver_id == request.auth.uid);
+      }
+    }
+    
+    // ========================================
+    // ORDERS Collection
+    // ========================================
+    match /orders/{orderId} {
+      // Client et prestataire peuvent lire la commande
+      allow read: if isAuthenticated() 
+                  && (resource.data.customer_id == request.auth.uid 
+                      || resource.data.provider_id == request.auth.uid);
+      
+      // Tout utilisateur authentifié peut créer une commande
+      allow create: if isAuthenticated() 
+                    && request.resource.data.customer_id == request.auth.uid;
+      
+      // Client et prestataire peuvent mettre à jour la commande
+      allow update: if isAuthenticated() 
+                    && (resource.data.customer_id == request.auth.uid 
+                        || resource.data.provider_id == request.auth.uid);
+      
+      // Seul le client peut supprimer sa commande
+      allow delete: if isAuthenticated() 
+                    && resource.data.customer_id == request.auth.uid;
+    }
+    
+    // ========================================
+    // FAVORITES Collection
+    // ========================================
+    match /favorites/{favoriteId} {
+      // Seul le propriétaire peut lire ses favoris
+      allow read: if isAuthenticated() 
+                  && resource.data.user_id == request.auth.uid;
+      
+      // Tout utilisateur peut créer un favori pour lui-même
+      allow create: if isAuthenticated() 
+                    && request.resource.data.user_id == request.auth.uid;
+      
+      // Seul le propriétaire peut supprimer ses favoris
+      allow delete: if isAuthenticated() 
+                    && resource.data.user_id == request.auth.uid;
+    }
+    
+    // ========================================
+    // NOTIFICATIONS Collection
+    // ========================================
+    match /notifications/{notificationId} {
+      // Seul le destinataire peut lire ses notifications
+      allow read: if isAuthenticated() 
+                  && resource.data.user_id == request.auth.uid;
+      
+      // Le système peut créer des notifications (via Cloud Functions)
+      // Pour l'instant, on autorise la création authentifiée
+      allow create: if isAuthenticated();
+      
+      // Seul le destinataire peut marquer comme lu/supprimer
+      allow update, delete: if isAuthenticated() 
+                            && resource.data.user_id == request.auth.uid;
+    }
+  }
+}

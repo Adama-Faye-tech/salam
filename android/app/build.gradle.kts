@@ -42,3 +42,8 @@ android {
 flutter {
     source = "../.."
 }
+
+// Apply the Google Services plugin to enable reading google-services.json
+// and configuring Firebase on Android. Requires the classpath added
+// in the root build.gradle.kts (com.google.gms:google-services).
+apply(plugin = "com.google.gms.google-services")

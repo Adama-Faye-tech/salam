@@ -1,11 +1,10 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/equipment_model.dart';
-import '../services/supabase_service.dart';
+import '../services/firestore_service.dart';
+import '../services/firebase_auth_service.dart';
 
 class EquipmentProvider with ChangeNotifier {
-  final SupabaseService _supabase = SupabaseService.instance;
-
   List<Equipment> _equipments = [];
   List<Equipment> _filteredEquipments = [];
   List<Equipment> _services = [];
@@ -16,11 +15,16 @@ class EquipmentProvider with ChangeNotifier {
   String? _selectedCategory;
   String? _selectedType;
   double _minPrice = 0;
-  double _maxPrice = 500000; // Aligné avec le max du RangeSlider
+  double _maxPrice = 500000;
   double _maxDistance = 100;
   bool _showAvailableOnly = false;
   bool _sortByDistance = false;
   bool _hasLocation = false;
+
+  // Pagination
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
 
   // Getters
   List<Equipment> get equipments =>
@@ -36,6 +40,7 @@ class EquipmentProvider with ChangeNotifier {
   bool get showAvailableOnly => _showAvailableOnly;
   bool get sortByDistance => _sortByDistance;
   bool get hasLocation => _hasLocation;
+  bool get hasMore => _hasMore;
 
   // Charger tous les équipements
   Future<void> loadEquipments({
@@ -48,21 +53,28 @@ class EquipmentProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      var query = _supabase.equipment.select();
+      Query query = FirestoreService.equipment;
 
       if (category != null) {
-        query = query.eq('category', category);
+        query = query.where('category', isEqualTo: category);
       }
       if (minPrice != null) {
-        query = query.gte('price', minPrice);
+        query = query.where('price', isGreaterThanOrEqualTo: minPrice);
       }
       if (maxPrice != null) {
-        query = query.lte('price', maxPrice);
+        query = query.where('price', isLessThanOrEqualTo: maxPrice);
       }
 
-      final data = await query.order('created_at', ascending: false);
-      _equipments = (data as List)
-          .map((json) => Equipment.fromJson(json))
+      final snapshot = await query
+          .orderBy('created_at', descending: true)
+          .get();
+      _equipments = snapshot.docs
+          .map(
+            (doc) => Equipment.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
           .toList();
 
       _applyFilters();
@@ -82,18 +94,23 @@ class EquipmentProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final userId = _supabase.currentUser?.id;
+      final userId = FirebaseAuthService.currentUser?.uid;
       if (userId == null) {
         throw Exception('Utilisateur non connecté');
       }
 
-      final data = await _supabase.equipment
-          .select()
-          .eq('owner_id', userId)
-          .order('created_at', ascending: false);
+      final snapshot = await FirestoreService.equipment
+          .where('owner_id', isEqualTo: userId)
+          .orderBy('created_at', descending: true)
+          .get();
 
-      _equipments = (data as List)
-          .map((json) => Equipment.fromJson(json))
+      _equipments = snapshot.docs
+          .map(
+            (doc) => Equipment.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
           .toList();
 
       _isLoading = false;
@@ -105,20 +122,25 @@ class EquipmentProvider with ChangeNotifier {
     }
   }
 
-  // Charger les services d''un prestataire
+  // Charger les services d'un prestataire
   Future<void> loadServicesByProvider(String providerId) async {
     try {
       _isLoading = true;
       _error = null;
       notifyListeners();
 
-      final data = await _supabase.equipment
-          .select()
-          .eq('owner_id', providerId)
-          .order('created_at', ascending: false);
+      final snapshot = await FirestoreService.equipment
+          .where('owner_id', isEqualTo: providerId)
+          .orderBy('created_at', descending: true)
+          .get();
 
-      _services = (data as List)
-          .map((json) => Equipment.fromJson(json))
+      _services = snapshot.docs
+          .map(
+            (doc) => Equipment.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
           .toList();
 
       _isLoading = false;
@@ -137,12 +159,12 @@ class EquipmentProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final userId = _supabase.currentUser?.id;
+      final userId = FirebaseAuthService.currentUser?.uid;
       if (userId == null) {
         throw Exception('Utilisateur non connecté');
       }
 
-      // Préparer les données pour Supabase
+      // Préparer les données pour Firestore
       final data = {
         'owner_id': userId,
         'title': equipmentData['name'] ?? equipmentData['title'] ?? '',
@@ -160,11 +182,11 @@ class EquipmentProvider with ChangeNotifier {
         'location': equipmentData['location'],
         'latitude': equipmentData['latitude'],
         'longitude': equipmentData['longitude'],
-        'created_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
       };
 
-      await _supabase.equipment.insert(data);
+      await FirestoreService.equipment.add(data);
       await loadMyEquipments();
 
       _isLoading = false;
@@ -189,7 +211,7 @@ class EquipmentProvider with ChangeNotifier {
       notifyListeners();
 
       final updateData = <String, dynamic>{
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': FieldValue.serverTimestamp(),
       };
 
       if (equipmentData['name'] != null || equipmentData['title'] != null) {
@@ -218,7 +240,7 @@ class EquipmentProvider with ChangeNotifier {
             equipmentData['photos'] ?? equipmentData['images'];
       }
 
-      await _supabase.equipment.update(updateData).eq('id', id);
+      await FirestoreService.equipment.doc(id).update(updateData);
 
       await loadMyEquipments();
       _isLoading = false;
@@ -239,7 +261,7 @@ class EquipmentProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      await _supabase.equipment.delete().eq('id', id);
+      await FirestoreService.equipment.doc(id).delete();
 
       await loadMyEquipments();
       _isLoading = false;
@@ -260,16 +282,25 @@ class EquipmentProvider with ChangeNotifier {
       _error = null;
       notifyListeners();
 
+      // Firestore n'a pas de recherche full-text native
+      // On charge tous les équipements et on filtre côté client
+      final snapshot = await FirestoreService.equipment
+          .orderBy('created_at', descending: true)
+          .get();
+
       final q = query.toLowerCase();
-
-      // Recherche avec Supabase (utilise ilike pour recherche insensible à la casse)
-      final data = await _supabase.equipment
-          .select()
-          .or('title.ilike.%$q%,description.ilike.%$q%')
-          .order('created_at', ascending: false);
-
-      _equipments = (data as List)
-          .map((json) => Equipment.fromJson(json))
+      _equipments = snapshot.docs
+          .map(
+            (doc) => Equipment.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
+          .where((equipment) {
+            final title = equipment.name.toLowerCase();
+            final description = equipment.description.toLowerCase();
+            return title.contains(q) || description.contains(q);
+          })
           .toList();
 
       _applyFilters();
@@ -282,62 +313,11 @@ class EquipmentProvider with ChangeNotifier {
     }
   }
 
-  // Obtenir la localisation de l''utilisateur
+  // Obtenir la localisation de l'utilisateur
   Future<void> getUserLocation() async {
-    try {
-      // Vérifier les permissions
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _error = 'Permission de localisation refusée';
-          _hasLocation = false;
-          notifyListeners();
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _error = 'Permission de localisation refusée définitivement';
-        _hasLocation = false;
-        notifyListeners();
-        return;
-      }
-
-      // Obtenir la position actuelle
-      final Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      // Mettre à jour les équipements avec la distance
-      if (_equipments.isNotEmpty) {
-        final updatedEquipments = _equipments.map((equipment) {
-          if (equipment.latitude != null && equipment.longitude != null) {
-            final distance =
-                Geolocator.distanceBetween(
-                  position.latitude,
-                  position.longitude,
-                  equipment.latitude!,
-                  equipment.longitude!,
-                ) /
-                1000; // Convertir en km
-
-            return equipment.copyWith(distance: distance);
-          }
-          return equipment;
-        }).toList();
-
-        _equipments = updatedEquipments;
-      }
-
-      _hasLocation = true;
-      _applyFilters(); // Ré-appliquer les filtres avec les distances
-      notifyListeners();
-    } catch (e) {
-      _error = 'Erreur de géolocalisation: $e';
-      _hasLocation = false;
-      notifyListeners();
-    }
+    // Géolocalisation désactivée dans la version simplifiée
+    _hasLocation = false;
+    notifyListeners();
   }
 
   // Appliquer les filtres
@@ -423,5 +403,88 @@ class EquipmentProvider with ChangeNotifier {
     _sortByDistance = false;
     _applyFilters();
     notifyListeners();
+  }
+
+  /// PAGINATION: Charger plus d'équipements
+  Future<void> loadMore() async {
+    if (!_hasMore || _isLoading) return;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      Query query = FirestoreService.equipment;
+
+      if (_selectedCategory != null) {
+        query = query.where('category', isEqualTo: _selectedCategory);
+      }
+
+      query = query.orderBy('created_at', descending: true).limit(_pageSize);
+
+      if (_lastDocument != null) {
+        query = query.startAfterDocument(_lastDocument!);
+      }
+
+      final snapshot = await query.get();
+
+      if (snapshot.docs.isEmpty) {
+        _hasMore = false;
+      } else {
+        _lastDocument = snapshot.docs.last;
+        
+        final newEquipments = snapshot.docs
+            .map(
+              (doc) => Equipment.fromJson({
+                ...doc.data() as Map<String, dynamic>,
+                'id': doc.id,
+              }),
+            )
+            .toList();
+
+        _equipments.addAll(newEquipments);
+        _applyFilters();
+      }
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Erreur de chargement: $e';
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// REAL-TIME: Stream pour écouter les changements en temps réel
+  Stream<List<Equipment>> watchEquipments({
+    String? category,
+  }) {
+    Query query = FirestoreService.equipment;
+
+    if (category != null) {
+      query = query.where('category', isEqualTo: category);
+    }
+
+    return query
+        .orderBy('created_at', descending: true)
+        .limit(_pageSize)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map(
+            (doc) => Equipment.fromJson({
+              ...doc.data() as Map<String, dynamic>,
+              'id': doc.id,
+            }),
+          )
+          .toList();
+    });
+  }
+
+  /// Réinitialiser la pagination
+  void resetPagination() {
+    _lastDocument = null;
+    _hasMore = true;
+    _equipments.clear();
+    _filteredEquipments.clear();
   }
 }
